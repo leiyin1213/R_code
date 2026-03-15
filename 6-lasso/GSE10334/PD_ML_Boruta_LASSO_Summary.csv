@@ -1,2 +1,2 @@
 "Train_AUC","Valid_AUC","Shared_genes_used","Boruta_genes","LASSO_signature_genes"
-0.914446721311475,0.922424679776294,27,12,11
+0.883452868852459,0.892537133922665,10,9,8

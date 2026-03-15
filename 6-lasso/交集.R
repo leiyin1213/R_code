@@ -5,7 +5,7 @@ library("VennDiagram")
 setwd("D:/r/实验数据/6-lasso")
 
 # 定义文件名列表
-file_names <- c("GSE10334_PD_ML_Boruta_LASSO_LASSO_signature_genes.txt", "GSE56815_PD_ML_Boruta_LASSO_LASSO_signature_genes.txt")
+file_names <- c("GSE10334_PD_ML_Boruta_LASSO_LASSO_signature_genes.txt", "GSE7158_PD_ML_Boruta_LASSO_LASSO_signature_genes.txt")
 gene_lists <- list()
 
 # 封装文件读取逻辑

@@ -1,5 +1,5 @@
 # ===== 0) 准备：feature genes（把你LASSO的结果填进来）=====
-feature_genes <- c("LY96","TLR1","CYTIP","MS4A6A")
+feature_genes <- c("IFI35","STAT2","SIGLEC1","SERPING1")
 
 # ===== 1) 对齐样本顺序（很关键，不对齐会画错）=====
 common_samples <- intersect(colnames(expr), names(group))
@@ -49,3 +49,4 @@ ggplot(df_long, aes(x = Group, y = Expr_z, color = Group)) +
     strip.text = element_text(face = "bold")
   ) +
   labs(x = NULL, y = "Expression (z-score)")
+

@@ -31,7 +31,7 @@ library(ReactomePA)
 
 setwd("D:/r/实验数据/4-GO和KEGG富集分析")
 #读入
-input_diff =read.table("intersectGenes.txt",sep="\t",header=T,check.names=F) 
+input_diff =read.table("intersectGenes1.txt",sep="\t",header=T,check.names=F) 
 input_gene <- input_diff[,1]
 #去除重复基因
 input_gene=unique(as.vector(input_gene))

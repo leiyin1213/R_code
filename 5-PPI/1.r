@@ -3,8 +3,8 @@ setwd("D:/r/实验数据/5-PPI")
 library(readr)
 # 假设 MCC 和 Degree 的结果分别保存在两个数据框中
 
-mcc <- read_csv("MCC.csv", )
-deg <- read_csv("Degree.csv")
+mcc <- read_csv("mcc715.csv", )
+deg <- read_csv("Degree715.csv")
 
 # 看看列名长什么样（先跑一次）
 colnames(mcc)
@@ -44,7 +44,7 @@ if (!is.null(score_col_mcc)) {
   mcc_common <- mcc_common[order(mcc_common[[score_col_mcc]], decreasing = TRUE), ]
 }
 
-top4 <- head(trimws(mcc_common[[gene_col_mcc]]), )
+top4 <- head(trimws(mcc_common[[gene_col_mcc]]), 10)
 write.csv(data.frame(Gene=mcc_genes), "Top4_intersection_MCCsorted.csv",
           row.names = FALSE, quote = FALSE)
 write.table(top4, "Top4_intersection_MCCsorted.txt",

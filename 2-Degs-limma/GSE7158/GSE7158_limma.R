@@ -1,13 +1,9 @@
-
-install.packages("limma")
-install.packages("pheatmap")
-
 # 引用包
 library(limma)
 library(pheatmap)
 
 gse <- "GSE7158"
-base_path <- "G:/Rcode/实验数据/实验数据/2-Degs-limma/"
+base_path <- "D:/r/实验数据/2-Degs-limma/"
 full_path <- file.path(base_path, gse)
 setwd(full_path)
 
@@ -138,15 +134,34 @@ if (diffLength == 0) {
   ann <- data.frame(Group = group)
   rownames(ann) <- colnames(expr_sub)
   
-  pdf(file = paste0(gse, "-heatmap.pdf"), width = 10, height = 7.5)
+  # 分组颜色
+  ann_colors <- list(
+    Group = c(Control = "#18C3D6", Treat = "#F29CA3")
+  )
+  
+  # 更接近参考图的蓝白红配色
+  my_color <- colorRampPalette(c("#2166AC", "white", "#B2182B"))(100)
+  
+  # 固定色阶范围
+  my_breaks <- seq(-2, 2, length.out = 101)
+  
+  pdf(file = paste0(gse, "-heatmap_compact.pdf"), width = 7.2, height = 4.2)
+  
   pheatmap(hmExp,
-           annotation_col = ann,
-           cluster_cols = FALSE,
-           show_colnames = FALSE,
            scale = "row",
+           color = my_color,
+           breaks = my_breaks,
+           annotation_col = ann,
+           annotation_colors = ann_colors,
+           cluster_rows = TRUE,
+           cluster_cols = FALSE,
+           show_rownames = FALSE,   # 关键：隐藏基因名
+           show_colnames = FALSE,   # 不显示样本名
+           border_color = NA,       # 去边框更干净
            fontsize = 8,
-           fontsize_row = 7,
-           fontsize_col = 8)
+           fontsize_row = 40,
+           fontsize_col = 35)  
+  
   dev.off()
 }
 
@@ -172,4 +187,3 @@ points(sigDn$logFC, -log10(sigDn$P.Value), pch = 20, col = "#4DBBD5", cex = 1.2)
 
 abline(v = c(-logFCfilter, logFCfilter), lty = 2)
 dev.off()
-

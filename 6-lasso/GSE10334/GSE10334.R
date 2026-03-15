@@ -13,7 +13,7 @@ for(p in pkgs){
 # 1) 路径与输入文件（你按实际修改）
 # ==============================
 # 工作目录：放 shared_genes_list.txt + normalize表达矩阵 + Control/Treat.txt 的地方
-setwd("D:/r/实验数据/6-lasso")   # <- 改成你的训练集文件夹
+setwd("D:/r/实验数据/6-lasso/GSE10334")   # <- 改成你的训练集文件夹
 
 # 训练集（PD）：表达矩阵 + 分组文件
 train_expr_file <- "GSE10334-normalize.txt"

@@ -2,7 +2,7 @@
 library("VennDiagram")
 
 # 设置工作目录（建议改为相对路径或通过参数传入）
-setwd("G:/Rcode/实验数据/实验数据/2-Degs-limma")
+setwd("D:/r/实验数据/2-Degs-limma/")
 
 # 定义文件名列表
 up_file_names <- c("GSE7158-upGenename.txt","GSE16134-upGenename.txt")

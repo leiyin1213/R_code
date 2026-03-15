@@ -3,7 +3,7 @@ library(limma)
 library(pheatmap)
 
 gse <- "GSE56814"
-base_path <- "G:/Rcode/实验数据/实验数据/2-Degs-limma/"
+base_path <- "D:/r/实验数据/2-Degs-limma/"
 full_path <- file.path(base_path, gse)
 setwd(full_path)
 
@@ -85,7 +85,7 @@ write.table(allDiff, file = paste0(gse, "-all.gene.txt"),
             sep = "\t", quote = FALSE, row.names = TRUE)
 
 # ========== 筛选阈值 ==========
-logFCfilter <- log2(1.2)  # 你原来是 log2(1)=0，这等于不筛FC；这里建议至少 1 或 0.5
+logFCfilter <- log2(1)  # 你原来是 log2(1)=0，这等于不筛FC；这里建议至少 1 或 0.5
 adjPfilter <- 0.05
 
 # 如果你的数据确实很弱，可以先用 adjPfilter=0.1 或改用 P.Value 做探索
@@ -116,18 +116,12 @@ write.table(rownames(downRegulated),
 write.table(rownames(diffSig),
             file = paste0(gse, "-diffGenename.txt"),
             sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
-
-# 输出差异基因名
-write.table(rownames(diffSig),
-            file = paste0(gse, "-diffGenename.txt"),
-            sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
-
 # ========== 热图 ==========
-geneNum <- 50
+
 diffSig2 <- diffSig[order(diffSig$logFC), , drop = FALSE]
 diffGeneName <- rownames(diffSig2)
 diffLength <- length(diffGeneName)
-
+geneNum <-length(diffGeneName)
 if (diffLength == 0) {
   message("没有筛到差异基因（FDR阈值过严或信号弱）。你可以先把 adjPfilter 放宽到 0.1 或改用 P.Value 做探索。")
 } else {
@@ -140,15 +134,46 @@ if (diffLength == 0) {
   ann <- data.frame(Group = group)
   rownames(ann) <- colnames(expr_sub)
   
-  pdf(file = paste0(gse, "-heatmap.pdf"), width = 10, height = 7.5)
+  # 分组颜色
+  ann_colors <- list(
+    Group = c(Control = "#18C3D6", Treat = "#F29CA3")
+  )
+  
+  # 更接近参考图的蓝白红配色
+  my_color <- colorRampPalette(c("#2166AC", "white", "#B2182B"))(100)
+  
+  # 固定色阶范围
+  my_breaks <- seq(-2, 2, length.out = 101)
+  
+  pdf(file = paste0(gse, "-heatmap_compact.pdf"), width = 7.2, height = 4.2)
+  
+  # 你的目标基因
+  target.genes <- c("DAPK2", "MAP1LC3B", "TUBA8", "RAB2A")
+  
+  # 假设表达矩阵叫 heatmap_matrix
+  # 行 = 基因，列 = 样本
+  # 先检查目标基因是否存在
+  target.genes <- intersect(target.genes, rownames(hmExp))
+  
+  # 生成行标签：只有目标基因显示名字，其他为空
+  lab_row <- ifelse(rownames(hmExp) %in% target.genes,
+                    rownames(hmExp), "")
   pheatmap(hmExp,
-           annotation_col = ann,
-           cluster_cols = FALSE,
-           show_colnames = FALSE,
            scale = "row",
+           color = my_color,
+           breaks = my_breaks,
+           annotation_col = ann,
+           annotation_colors = ann_colors,
+           cluster_rows = TRUE,
+           cluster_cols = FALSE,
+           show_rownames = TRUE,   # 关键：隐藏基因名
+           show_colnames = FALSE,   # 不显示样本名
+           border_color = NA, 
+           labels_row = lab_row,# 去边框更干净
            fontsize = 8,
-           fontsize_row = 7,
-           fontsize_col = 8)
+           fontsize_row = 10,
+           fontsize_col = 35)  
+  
   dev.off()
 }
 
@@ -174,4 +199,5 @@ points(sigDn$logFC, -log10(sigDn$P.Value), pch = 20, col = "#4DBBD5", cex = 1.2)
 
 abline(v = c(-logFCfilter, logFCfilter), lty = 2)
 dev.off()
+
 
