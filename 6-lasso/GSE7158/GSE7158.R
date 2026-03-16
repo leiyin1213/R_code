@@ -13,7 +13,7 @@ for(p in pkgs){
 # 1) 路径与输入文件（你按实际修改）
 # ==============================
 # 工作目录：放 shared_genes_list.txt + normalize表达矩阵 + Control/Treat.txt 的地方
-setwd("D:/r/实验数据/6-lasso/GSE7158")   # <- 改成你的训练集文件夹
+setwd("D:/r/R_code/6-lasso/GSE7158")   # <- 改成你的训练集文件夹
 
 # 训练集（PD）：表达矩阵 + 分组文件
 train_expr_file <- "GSE7158-normalize.txt"
@@ -21,7 +21,7 @@ train_control_file <- "Control.txt"
 train_treat_file   <- "Treat.txt"
 
 # 外部验证集（PD）：通常放在另一个文件夹里
-valid_dir <- "D:/r/实验数据/2-Degs-limma/GSE56814"   # <- 改成你的验证集文件夹
+valid_dir <- "D:/r/R_code/2-Degs-limma/GSE56814"   # <- 改成你的验证集文件夹
 valid_expr_file <- "GSE56814-normalize.txt"
 valid_control_file <- "Control.txt"
 valid_treat_file   <- "Treat.txt"
@@ -139,7 +139,26 @@ train_roc_df <- data.frame(
   sensitivity = rev(roc_train$sensitivities)
 )
 write.csv(train_roc_df, paste0(out_prefix, "_Train_ROC_points.csv"), row.names = FALSE)
+# ==============================
+# 7.5) 绘制训练集 ROC 曲线
+# ==============================
+pdf(paste0(out_prefix, "_Train_ROC_Curve.pdf"), width = 6, height = 5)
+plot(roc_train, 
+     main = paste0("Training Set ROC Curve (AUC = ", round(auc_train, 3), ")"),
+     col = "blue", 
+     lwd = 2,
+     print.auc = FALSE)
+abline(a = 0, b = 1, lty = 2, col = "gray")  # 添加对角线参考
+dev.off()
 
+png(paste0(out_prefix, "_Train_ROC_Curve.png"), width = 800, height = 600, res = 150)
+plot(roc_train, 
+     main = paste0("Training Set ROC Curve (AUC = ", round(auc_train, 3), ")"),
+     col = "blue", 
+     lwd = 2,
+     print.auc = FALSE)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+dev.off()
 # ==============================
 # 8) 外部验证集：读入表达矩阵与分组，预测并算AUC
 # ==============================
@@ -176,7 +195,26 @@ valid_roc_df <- data.frame(
   sensitivity = rev(roc_valid$sensitivities)
 )
 write.csv(valid_roc_df, paste0(out_prefix, "_Valid_ROC_points.csv"), row.names = FALSE)
+# ==============================
+# 8.5) 绘制验证集 ROC 曲线
+# ==============================
+pdf(paste0(out_prefix, "_Valid_ROC_Curve.pdf"), width = 6, height = 5)
+plot(roc_valid, 
+     main = paste0("Validation Set ROC Curve (AUC = ", round(auc_valid, 3), ")"),
+     col = "red", 
+     lwd = 2,
+     print.auc = FALSE)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+dev.off()
 
+png(paste0(out_prefix, "_Valid_ROC_Curve.png"), width = 800, height = 600, res = 150)
+plot(roc_valid, 
+     main = paste0("Validation Set ROC Curve (AUC = ", round(auc_valid, 3), ")"),
+     col = "red", 
+     lwd = 2,
+     print.auc = FALSE)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+dev.off()
 # ==============================
 # 9) 保存汇总
 # ==============================
@@ -288,5 +326,46 @@ plot(fit_cv, main="Cross-validation curve",
      xlab="log(Lambda)", ylab="Binomial deviance")
 abline(v=log(fit_cv$lambda.min), lty=2)
 abline(v=log(fit_cv$lambda.1se), lty=3)
+dev.off()
+
+# ==============================
+# 9.5) 绘制训练集与验证集对比 ROC 图
+# ==============================
+pdf(paste0(out_prefix, "_Compare_ROC_Curve.pdf"), width = 6, height = 5)
+plot(roc_train, 
+     col = "blue", 
+     lwd = 2,
+     main = "ROC Curves: Training vs Validation",
+     print.auc = FALSE)
+plot(roc_valid, 
+     col = "red", 
+     lwd = 2, 
+     add = TRUE)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+legend("bottomright", 
+       legend = c(paste0("Train AUC=", round(auc_train, 3)), 
+                  paste0("Valid AUC=", round(auc_valid, 3))),
+       col = c("blue", "red"), 
+       lwd = 2,
+       bty = "n")
+dev.off()
+
+png(paste0(out_prefix, "_Compare_ROC_Curve.png"), width = 800, height = 600, res = 150)
+plot(roc_train, 
+     col = "blue", 
+     lwd = 2,
+     main = "ROC Curves: Training vs Validation",
+     print.auc = FALSE)
+plot(roc_valid, 
+     col = "red", 
+     lwd = 2, 
+     add = TRUE)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+legend("bottomright", 
+       legend = c(paste0("Train AUC=", round(auc_train, 3)), 
+                  paste0("Valid AUC=", round(auc_valid, 3))),
+       col = c("blue", "red"), 
+       lwd = 2,
+       bty = "n")
 dev.off()
 
