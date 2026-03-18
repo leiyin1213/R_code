@@ -13,7 +13,7 @@ for(p in pkgs){
 # 1) 路径与输入文件（你按实际修改）
 # ==============================
 # 工作目录：放 shared_genes_list.txt + normalize表达矩阵 + Control/Treat.txt 的地方
-setwd("D:/r/R_code/6-lasso/GSE7158")   # <- 改成你的训练集文件夹
+setwd("G:/Rcode/code/6-lasso/GSE7158")   # <- 改成你的训练集文件夹
 
 # 训练集（PD）：表达矩阵 + 分组文件
 train_expr_file <- "GSE7158-normalize.txt"
@@ -21,7 +21,7 @@ train_control_file <- "Control.txt"
 train_treat_file   <- "Treat.txt"
 
 # 外部验证集（PD）：通常放在另一个文件夹里
-valid_dir <- "D:/r/R_code/2-Degs-limma/GSE56814"   # <- 改成你的验证集文件夹
+valid_dir <- "G:/Rcode/code/2-Degs-limma/GSE56814"   # <- 改成你的验证集文件夹
 valid_expr_file <- "GSE56814-normalize.txt"
 valid_control_file <- "Control.txt"
 valid_treat_file   <- "Treat.txt"
@@ -159,6 +159,130 @@ plot(roc_train,
      print.auc = FALSE)
 abline(a = 0, b = 1, lty = 2, col = "gray")
 dev.off()
+# 在第7部分后添加单个基因ROC曲线分析
+# ==============================
+# 7b) 单个基因ROC曲线分析
+# ==============================
+
+# 计算每个LASSO基因的单独ROC曲线
+single_gene_rocs <- list()
+single_gene_aucs <- data.frame(
+  Gene = character(),
+  AUC = numeric(),
+  P_Value = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for(gene in lasso_genes) {
+  if(gene %in% colnames(x_train)) {
+    # 训练集上的单基因ROC
+    single_pred_train <- x_train[, gene]
+    roc_single <- pROC::roc(y_train, single_pred_train, quiet = TRUE)
+    auc_single <- as.numeric(pROC::auc(roc_single))
+    
+    # 计算P值（Wilcoxon检验）
+    group1 <- x_train[y_train == levels(y_train)[1], gene]  # Control group
+    group2 <- x_train[y_train == levels(y_train)[2], gene]  # Case group
+    wilcox_test <- wilcox.test(group1, group2)
+    p_value <- wilcox_test$p.value
+    
+    single_gene_aucs <- rbind(single_gene_aucs, 
+                             data.frame(Gene = gene, 
+                                       AUC = auc_single, 
+                                       P_Value = p_value))
+    
+    # 保存ROC对象用于绘图
+    single_gene_rocs[[gene]] <- roc_single
+  }
+}
+
+# 保存单基因AUC结果
+write.csv(single_gene_aucs, paste0(out_prefix, "_Single_Gene_AUCs.csv"), 
+          row.names = FALSE)
+
+# 绘制所有LASSO基因的ROC曲线
+pdf(paste0(out_prefix, "_Single_Gene_ROCs.pdf"), width = 12, height = 8)
+par(mfrow = c(2, 3), mar = c(4, 4, 3, 2))
+
+for(gene in lasso_genes) {
+  if(exists("single_gene_rocs") && gene %in% names(single_gene_rocs)) {
+    plot(single_gene_rocs[[gene]], 
+         main = paste(gene, "\nAUC =", round(single_gene_aucs[single_gene_aucs$Gene == gene, "AUC"], 3)),
+         col = "blue", lwd = 2)
+    abline(a = 0, b = 1, lty = 2, col = "gray")
+  }
+}
+
+# 如果基因数量不足6个，空白位置显示提示
+remaining_plots <- 6 - min(length(lasso_genes), 6)
+if(remaining_plots > 0) {
+  for(i in 1:remaining_plots) {
+    plot(0, type = "n", axes = FALSE, xlab = "", ylab = "")
+    text(0, 0, "No data", cex = 1.5, col = "gray")
+  }
+}
+dev.off()
+
+# 创建一个综合的多基因ROC比较图
+if(length(lasso_genes) > 0) {
+  pdf(paste0(out_prefix, "_Combined_Single_Gene_ROCs.pdf"), width = 10, height = 8)
+  
+  # 找出AUC最高的几个基因进行展示（最多8个）
+  top_genes <- head(single_gene_aucs[order(-single_gene_aucs$AUC), "Gene"], 8)
+  
+  plot(1, type = "n", xlim = c(0, 1), ylim = c(0, 1), 
+       xlab = "1 - Specificity", ylab = "Sensitivity",
+       main = "Top Single Gene ROC Curves")
+  abline(a = 0, b = 1, lty = 2, col = "gray")
+  
+  colors <- rainbow(length(top_genes))
+  for(i in seq_along(top_genes)) {
+    gene <- top_genes[i]
+    if(gene %in% names(single_gene_rocs)) {
+      lines(single_gene_rocs[[gene]], col = colors[i], lwd = 2)
+    }
+  }
+  
+  legend("bottomright", 
+         legend = paste(top_genes, 
+                       " (AUC=", 
+                       round(single_gene_aucs[single_gene_aucs$Gene %in% top_genes, "AUC"], 3),
+                       ")", sep = ""),
+         col = colors, lwd = 2, cex = 0.7)
+  dev.off()
+}
+
+# 也可以对验证集计算单基因ROC（如果验证集包含这些基因）
+if(exists("x_valid2")) {
+  validation_gene_aucs <- data.frame(
+    Gene = character(),
+    Validation_AUC = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  for(gene in lasso_genes) {
+    if(gene %in% colnames(x_valid2)) {
+      single_pred_valid <- x_valid2[, gene]
+      roc_valid_single <- pROC::roc(y_valid, single_pred_valid, quiet = TRUE)
+      auc_valid_single <- as.numeric(pROC::auc(roc_valid_single))
+      
+      validation_gene_aucs <- rbind(validation_gene_aucs,
+                                   data.frame(Gene = gene,
+                                             Validation_AUC = auc_valid_single))
+    }
+  }
+  
+  # 合并训练集和验证集的单基因AUC结果
+  combined_gene_aucs <- merge(single_gene_aucs, validation_gene_aucs, by = "Gene", all.x = TRUE)
+  write.csv(combined_gene_aucs, paste0(out_prefix, "_Combined_Single_Gene_AUCs.csv"), 
+            row.names = FALSE)
+  
+  # 添加到最终汇总表
+  summary_out$Best_Single_Gene_AUC <- max(single_gene_aucs$AUC, na.rm = TRUE)
+  summary_out$Mean_Single_Gene_AUC <- mean(single_gene_aucs$AUC, na.rm = TRUE)
+}
+
+cat("单基因ROC分析完成。识别出", length(lasso_genes), "个LASSO基因的单独性能。\n")
 # ==============================
 # 8) 外部验证集：读入表达矩阵与分组，预测并算AUC
 # ==============================
