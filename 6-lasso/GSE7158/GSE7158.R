@@ -230,6 +230,7 @@ if(length(lasso_genes) > 0) {
   # 找出AUC最高的几个基因进行展示（最多8个）
   top_genes <- head(single_gene_aucs[order(-single_gene_aucs$AUC), "Gene"], 8)
   
+  # 创建空白坐标系
   plot(1, type = "n", xlim = c(0, 1), ylim = c(0, 1), 
        xlab = "1 - Specificity", ylab = "Sensitivity",
        main = "Top Single Gene ROC Curves")
@@ -239,7 +240,12 @@ if(length(lasso_genes) > 0) {
   for(i in seq_along(top_genes)) {
     gene <- top_genes[i]
     if(gene %in% names(single_gene_rocs)) {
-      lines(single_gene_rocs[[gene]], col = colors[i], lwd = 2)
+      # 使用plot()而不是lines()，确保曲线起点正确
+      plot(single_gene_rocs[[gene]], 
+           add = TRUE, 
+           col = colors[i], 
+           lwd = 2,
+           type = "l")
     }
   }
   

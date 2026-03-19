@@ -210,6 +210,7 @@ if(length(lasso_genes) > 0) {
   # 找出AUC最高的几个基因进行展示（最多8个）
   top_genes <- head(single_gene_aucs[order(-single_gene_aucs$AUC), "Gene"], 8)
   
+  # 创建空白坐标系
   plot(1, type = "n", xlim = c(0, 1), ylim = c(0, 1), 
        xlab = "1 - Specificity", ylab = "Sensitivity",
        main = "Top Single Gene ROC Curves")
@@ -219,17 +220,20 @@ if(length(lasso_genes) > 0) {
   for(i in seq_along(top_genes)) {
     gene <- top_genes[i]
     if(gene %in% names(single_gene_rocs)) {
-      roc_obj <- single_gene_rocs[[gene]]
-      lines(roc_obj$roc, col = colors[i], lwd = 2)
+      # 使用plot()而不是lines()，确保曲线起点正确
+      plot(single_gene_rocs[[gene]], 
+           add = TRUE, 
+           col = colors[i], 
+           lwd = 2,
+           type = "l")
     }
   }
   
-  legend_labels <- paste(top_genes, 
-                        " (AUC=", 
-                        round(single_gene_aucs[single_gene_aucs$Gene %in% top_genes, "AUC"], 3),
-                        ")", sep = "")
   legend("bottomright", 
-         legend = legend_labels,
+         legend = paste(top_genes, 
+                       " (AUC=", 
+                       round(single_gene_aucs[single_gene_aucs$Gene %in% top_genes, "AUC"], 3),
+                       ")", sep = ""),
          col = colors, lwd = 2, cex = 0.7)
   dev.off()
 }
@@ -414,4 +418,65 @@ plot(fit_cv, main="Cross-validation curve",
 abline(v=log(fit_cv$lambda.min), lty=2)
 abline(v=log(fit_cv$lambda.1se), lty=3)
 dev.off()
+## ==============================
+# 10) 修改后的箱线图绘制功能（修复样本不足问题）
+# ==============================
+plot_boxplot_pdf <- function(expr_mat, group_labels, gene_name, out_prefix) {
+  # 提取特定基因的表达值
+  if(gene_name %in% colnames(expr_mat)) {  # 注意：这里是colnames而不是rownames
+    gene_expr <- expr_mat[, gene_name]  # 调整为列索引
+    
+    # 按分组分离数据
+    healthy_expr <- gene_expr[group_labels == 0]
+    diseased_expr <- gene_expr[group_labels == 1]
+    
+    # 检查每个组的样本数量
+    n_healthy <- length(healthy_expr)
+    n_diseased <- length(diseased_expr)
+    
+    # 添加样本数量检查
+    if(n_healthy < 2 || n_diseased < 2){
+      cat(paste("警告: 基因", gene_name, "在至少一个组中样本数不足（健康:", n_healthy, ", 疾病:", n_diseased, "）\n"))
+      return(list(p_value = NA, healthy_mean = mean(healthy_expr), 
+                  diseased_mean = mean(diseased_expr)))
+    }
+    
+    # 执行统计检验
+    t_test <- t.test(healthy_expr, diseased_expr)
+    p_value <- t_test$p.value
+    
+    # 绘制箱线图并保存为PDF
+    pdf(paste0(out_prefix, "_", gene_name, "_Boxplot.pdf"), width = 8, height = 6)
+    boxplot(list(Healthy = healthy_expr, Diseased = diseased_expr),
+            main = paste0("Expression of ", gene_name),
+            xlab = "Type", ylab = "Expression Level",
+            col = c("lightblue", "lightcoral"),
+            notch = TRUE,
+            outline = FALSE)
+    
+    # 添加散点图
+    points(rep(1, length(healthy_expr)), healthy_expr, 
+           pch = 17, col = "lightblue", cex = 0.8)
+    points(rep(2, length(diseased_expr)), diseased_expr, 
+           pch = 16, col = "lightcoral", cex = 0.8)
+    
+    # 添加显著性标记
+    text(x = 1.5, y = max(c(healthy_expr, diseased_expr)) + 0.1,
+         labels = paste("p =", format.pval(p_value, digits = 2)),
+         pos = 3, cex = 0.8)
+    
+    dev.off()
+    
+    return(list(p_value = p_value, healthy_mean = mean(healthy_expr), 
+                diseased_mean = mean(diseased_expr)))
+  }
+}
 
+# 对每个LASSO基因绘制箱线图并保存为PDF
+boxplot_results <- list()
+for(gene in lasso_genes) {
+  if(gene %in% colnames(x_train)) {  # 修改为colnames
+    result <- plot_boxplot_pdf(x_train, as.numeric(y_train), gene, out_prefix)
+    boxplot_results[[gene]] <- result
+  }
+}
