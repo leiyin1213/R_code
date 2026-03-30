@@ -1,13 +1,13 @@
 # ============================================
-# Figure 5C - ROC Curve
+# Figure 5C - Correlation Plot
 # ============================================
 
 # ===== 1. 加载包 =====
 library(tidyverse)
-library(pROC)
+library(ggpubr)
 
-# ===== 2. 读取数据（和你前面一样）=====
-setwd("D:/r/R_code/6-lasso/GSE7158/单基因诊断")
+# ===== 2. 读取表达矩阵 =====
+setwd("D:/r/R_code/6-lasso/GSE7158/final")
 
 expr <- read.table("GSE7158-normalize.txt",
                    header = TRUE,
@@ -15,70 +15,61 @@ expr <- read.table("GSE7158-normalize.txt",
                    sep = "\t",
                    check.names = FALSE)
 
-disease <- read.table("Treat.txt")$V1
-healthy <- read.table("Control.txt")$V1
+# ===== 3. 选择两个基因（按论文改）=====
+gene_x <- "IFI35"
+gene_y <- "CXCL8"
 
-# ===== 3. 分组 =====
-group <- c(
-  setNames(rep(1, length(disease)), disease),  # 1 = Disease
-  setNames(rep(0, length(healthy)), healthy)   # 0 = Healthy
+# ===== 4. 提取表达 =====
+df <- data.frame(
+  x = as.numeric(expr[gene_x, ]),
+  y = as.numeric(expr[gene_y, ])
 )
 
-# ===== 4. 特征基因 =====
-feature_genes <- read.table("intersectGenes.txt")$V1
+# ===== 5. 计算相关性 =====
+cor_test <- cor.test(df$x, df$y, method = "pearson")
 
-# ===== 5. 对齐样本 =====
-common_samples <- intersect(colnames(expr), names(group))
+r_val <- round(cor_test$estimate, 2)
+p_val <- signif(cor_test$p.value, 3)
 
-expr2 <- expr[feature_genes, common_samples]
-group2 <- group[common_samples]
+label_text <- paste0("R = ", r_val, ", p = ", p_val)
 
-# ===== 6. 转置（样本为行）=====
-data_mat <- t(expr2)
-data_mat <- as.data.frame(data_mat)
-
-# ===== 7. ROC分析（单基因）=====
-library(ggplot2)
-
-roc_list <- list()
-auc_list <- c()
-
-for (gene in feature_genes) {
+# ===== 6. 作图 =====
+p <- ggplot(df, aes(x = x, y = y)) +
   
-  roc_obj <- roc(group2, data_mat[[gene]])
+  # 🔥 散点
+  geom_point(color = "black", size = 2, alpha = 0.8) +
   
-  roc_list[[gene]] <- roc_obj
-  auc_list[gene] <- auc(roc_obj)
-}
-
-# ===== 8. 画图 =====
-plot(NULL, xlim = c(1,0), ylim = c(0,1),
-     xlab = "False Positive Rate",
-     ylab = "True Positive Rate",
-     main = "ROC Curve")
-
-# ===== 颜色 =====
-colors <- c("#E64B35","#4DBBD5","#00A087","#3C5488")
-
-i <- 1
-for (gene in feature_genes) {
+  # 🔥 回归线 + 置信区间
+  geom_smooth(method = "lm",
+              color = "red",
+              fill = "red",
+              alpha = 0.2,
+              size = 1.2) +
   
-  lines(roc_list[[gene]],
-        col = colors[i],
-        lwd = 2)
+  # 🔥 左上角标注（关键！）
+  annotate("text",
+           x = min(df$x),
+           y = max(df$y),
+           label = label_text,
+           hjust = 0,
+           size = 5) +
   
-  i <- i + 1
-}
+  # 🔥 论文风格
+  theme_classic() +
+  theme(
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14),
+    plot.title = element_text(size = 14, face = "bold")
+  ) +
+  
+  labs(
+    x = gene_x,
+    y = gene_y,
+    title = "PD-GSE10334"
+  )
 
-# ===== 图例（关键）=====
-legend("bottomright",
-       legend = paste0(names(auc_list),
-                       " (AUC = ",
-                       round(auc_list, 3), ")"),
-       col = colors,
-       lwd = 2,
-       cex = 0.8)
+# ===== 7. 输出 =====
+print(p)
 
-# ===== 保存 =====
-dev.copy(pdf, "Figure5C_ROC.pdf", width = 5, height = 5)
-dev.off()
+ggsave("Figure5C_correlation.pdf", p, width = 5, height = 5)
+
