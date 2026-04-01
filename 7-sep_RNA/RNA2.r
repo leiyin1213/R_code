@@ -1,12 +1,23 @@
+BiocManager::install("SingleR")
+BiocManager::install("celldex")
+BiocManager::install("scrapper")
+
 library(Seurat)
+library(ggplot2)
+library(patchwork)
 library(Matrix)
 library(dplyr)
 library(stringr)
+library(SingleR)
+library(celldex)
+library(scrapper)
+library(dplyr)
 # =========================
 # 🔧 1. 设置路径
 # =========================
-base_dir <- "G:/Rcode/code/7-sep_RNA/GSE164241_RAW"
-
+base_dir <- "D:/r/R_code/7-sep_RNA/GSE164241_RAW"
+hpca.se <- HumanPrimaryCellAtlasData()
+ref2 <- BlueprintEncodeData()
 # =========================
 # 🔍 2. 找所有 matrix 文件（每个代表一个样本）
 # =========================
@@ -82,7 +93,7 @@ for(i in seq_along(mtx_files)){
 # 🔗 合并
 # =========================
 combined <- merge(seurat_list[[1]], y = seurat_list[-1])
-
+combined <- JoinLayers(combined)
 cat("🎉 合并完成！细胞数:", ncol(combined), "\n")
 
 # =========================
@@ -145,4 +156,109 @@ head(markers)
 # =========================
 saveRDS(combined, file = "GSE164241_combined.rds")
 
+# =========================
+# 💾 自动注释
+# =========================
+
+###把rna的转录表达数据提取
+testdata <- GetAssayData(
+  combined,
+  assay = "RNA",
+  layer  = "data"
+)
+clusters <- combined$seurat_clusters
+cellpred <- SingleR(test = testdata, ref = ref2, 
+                    labels = ref2$label.main, 
+                    clusters = clusters,assay.type.test = "logcounts",
+                    assay.type.ref = "logcounts")
+##添加到metadata当中
+celltype = data.frame(ClusterID=rownames(cellpred), 
+                      celltype=cellpred$labels, stringsAsFactors = FALSE)
+combined@meta.data$celltype = "NA"
+for(i in 1:nrow(celltype)){
+  combined@meta.data[which(combined@meta.data$seurat_clusters == celltype$ClusterID[i]),'celltype'] <- celltype$celltype[i]}
+
+DimPlot(combined, reduction = "umap",label = T)
+DimPlot(combined, reduction = "umap", group.by = "celltype",label = F)
+#更改Active Idents
+#重新划分细胞亚群
+cluster_map <- combined@meta.data %>%
+  group_by(seurat_clusters, celltype) %>%
+  summarise(n = n()) %>%
+  slice_max(n, n = 1)
+
+new.cluster.ids <- cluster_map$celltype
+
+names(new.cluster.ids) <- levels(combined)
+combined <- RenameIdents(combined, new.cluster.ids)
+DimPlot(combined, reduction = "umap",label = T)
+save(combined,file="OS.relabel.Rdata")
+load("OS.relabel.Rdata")
+
+
+
+# ===== 7. 右图：细胞类型UMAP =====
+FeaturePlot(combined, features = c("MS4A6A"))
+VlnPlot(combined,features = c("MS4A6A"),pt.size = 0)
+p2 <- DimPlot(
+  combined,
+  reduction = "umap",
+  group.by = "seurat_clusters",
+  pt.size = 0.5
+) +
+  theme_classic() +
+  ggtitle("gingival tissues") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.line = element_line(color = "black"),
+    panel.grid = element_blank(),
+    legend.position = "right"
+  )
+
+p2
+# ===== 8. 左图：MS4A6A表达 =====
+p1 <- FeaturePlot(
+  combined,
+  reduction = "umap",
+  pt.size = 0.5
+) +
+  scale_color_gradient(
+    low = "lightgrey",
+    high = "red"
+  ) +
+  theme_classic() +
+  theme(
+    axis.line = element_line(color = "black"),
+    panel.grid = element_blank()
+  )
+# ===== 9. 添加虚线框 + 标注 =====
+# ⚠️ 需要根据你的UMAP实际调整坐标
+p1 <- p1 +
+  annotate("rect",
+           xmin = -8, xmax = -1,
+           ymin = -6, ymax = 1,
+           linetype = "dashed",
+           color = "black",
+           fill = NA,
+           size = 0.8) +
+  annotate("text",
+           x = -4,
+           y = 2,
+           label = "MS4A6A",
+           size = 6)
+p1
+# ===== 10. 拼图 =====
+p_final <- p1 + p2
+
+# 显示
+print(p_final)
+
+# ===== 11. 保存图片 =====
+ggsave(
+  filename = "Figure_MS4A6A_gingival_umap.png",
+  plot = p_final,
+  width = 12,
+  height = 12,
+  dpi = 300
+)
 cat("✅ 全流程完成！\n")
