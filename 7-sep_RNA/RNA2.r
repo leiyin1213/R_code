@@ -12,9 +12,11 @@ library(SingleR)
 library(celldex)
 library(scrapper)
 library(dplyr)
+library(ggsci)  # 添加此行
 # =========================
 # 🔧 1. 设置路径
 # =========================
+setwd("D:/r/R_code/7-sep_RNA")
 base_dir <- "D:/r/R_code/7-sep_RNA/GSE164241_RAW"
 hpca.se <- HumanPrimaryCellAtlasData()
 ref2 <- BlueprintEncodeData()
@@ -150,12 +152,14 @@ markers <- FindAllMarkers(combined,
                           logfc.threshold = 0.25)
 
 head(markers)
-
+saveRDS(head, file = "GSE164241_markers.rds")
 # =========================
 # 💾 保存
 # =========================
 saveRDS(combined, file = "GSE164241_combined.rds")
 
+markers <- readRDS("GSE164241_markers.rds")
+combined<-readRDS("GSE164241_combined.rds")
 # =========================
 # 💾 自动注释
 # =========================
@@ -191,7 +195,7 @@ new.cluster.ids <- cluster_map$celltype
 
 names(new.cluster.ids) <- levels(combined)
 combined <- RenameIdents(combined, new.cluster.ids)
-DimPlot(combined, reduction = "umap",label = T)
+DimPlot(combined, reduction = "umap",label = F)
 save(combined,file="OS.relabel.Rdata")
 load("OS.relabel.Rdata")
 
@@ -200,10 +204,13 @@ load("OS.relabel.Rdata")
 # ===== 7. 右图：细胞类型UMAP =====
 FeaturePlot(combined, features = c("MS4A6A"))
 VlnPlot(combined,features = c("MS4A6A"),pt.size = 0)
+
+
+
 p2 <- DimPlot(
   combined,
   reduction = "umap",
-  group.by = "seurat_clusters",
+ # group.by = "seurat_clusters",
   pt.size = 0.5
 ) +
   theme_classic() +
@@ -217,33 +224,57 @@ p2 <- DimPlot(
 
 p2
 # ===== 8. 左图：MS4A6A表达 =====
-p1 <- FeaturePlot(
-  combined,
-  reduction = "umap",
-  pt.size = 0.5
-) +
-  scale_color_gradient(
-    low = "lightgrey",
-    high = "red"
-  ) +
-  theme_classic() +
-  theme(
-    axis.line = element_line(color = "black"),
-    panel.grid = element_blank()
-  )
+# p1 <- FeaturePlot(
+#   combined,
+#   reduction = "umap",
+#   features = c("MS4A6A"),
+#   pt.size = 0.5
+# ) +
+#   scale_color_gradient(
+#     low = "lightgrey",
+#     high = "red"
+#   ) +
+#   theme_classic() +
+#   theme(
+#     axis.line = element_line(color = "black"),
+#     panel.grid = element_blank()
+#   )
+# p1
+# 获取细胞类型信息
+cell_types <- levels(combined$celltype)
+tmp_length <- length(cell_types)
+# 使用 RColorBrewer 或 rainbow 生成颜色
+if(tmp_length <= 12) {
+  # 使用 Set3 调色板 (最多12种颜色)
+  cell_type_cols <- brewer.pal(max(tmp_length, 3), "Set3")
+} else {
+  # 如果细胞类型超过12个，使用彩虹色
+  cell_type_cols <- rainbow(tmp_length)
+}
+
+# 找到特定细胞类型和细胞ID
+epithelial_cells <- WhichCells(combined, idents = "Melanocytes")  # 根据实际的细胞类型ID调整
+
+# 绘制高亮图
+DimPlot(combined, 
+        cells.highlight = list(Epithelial = epithelial_cells),
+        label = TRUE,
+        reduction = "umap",
+        cols.highlight = "red",  # 高亮颜色
+        cols = cell_type_cols)   # 背景色
 # ===== 9. 添加虚线框 + 标注 =====
 # ⚠️ 需要根据你的UMAP实际调整坐标
 p1 <- p1 +
   annotate("rect",
-           xmin = -8, xmax = -1,
-           ymin = -6, ymax = 1,
+           xmin = -2, xmax = 5,
+           ymin = -8, ymax = -1,
            linetype = "dashed",
            color = "black",
            fill = NA,
            size = 0.8) +
   annotate("text",
-           x = -4,
-           y = 2,
+           x = 2,
+           y = 0,
            label = "MS4A6A",
            size = 6)
 p1
@@ -262,3 +293,4 @@ ggsave(
   dpi = 300
 )
 cat("✅ 全流程完成！\n")
+
