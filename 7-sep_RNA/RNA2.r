@@ -13,11 +13,12 @@ library(celldex)
 library(scrapper)
 library(dplyr)
 library(ggsci)  # 添加此行
+library(scales)
 # =========================
 # 🔧 1. 设置路径
 # =========================
-setwd("D:/r/R_code/7-sep_RNA")
-base_dir <- "D:/r/R_code/7-sep_RNA/GSE164241_RAW"
+setwd("G:/Rcode/code/7-sep_RNA")
+base_dir <- "G:/Rcode/code/7-sep_RNA/GSE164241_RAW"
 hpca.se <- HumanPrimaryCellAtlasData()
 ref2 <- BlueprintEncodeData()
 # =========================
@@ -152,7 +153,7 @@ markers <- FindAllMarkers(combined,
                           logfc.threshold = 0.25)
 
 head(markers)
-saveRDS(head, file = "GSE164241_markers.rds")
+saveRDS(markers, file = "GSE164241_markers.rds")
 # =========================
 # 💾 保存
 # =========================
@@ -224,29 +225,35 @@ p2 <- DimPlot(
 
 p2
 # ===== 8. 左图：MS4A6A表达 =====
-# p1 <- FeaturePlot(
-#   combined,
-#   reduction = "umap",
-#   features = c("MS4A6A"),
-#   pt.size = 0.5
-# ) +
-#   scale_color_gradient(
-#     low = "lightgrey",
-#     high = "red"
-#   ) +
-#   theme_classic() +
-#   theme(
-#     axis.line = element_line(color = "black"),
-#     panel.grid = element_blank()
-#   )
+p1 <- FeaturePlot(
+  combined,
+  reduction = "umap",
+  features = c("MS4A6A"),
+  pt.size = 0.5
+) 
++
+  scale_color_gradient(
+    low = "lightgrey",
+    high = "red"
+  ) +
+  theme_classic() +
+  theme(
+    axis.line = element_line(color = "black"),
+    panel.grid = element_blank()
+  )
 # p1
 # 获取细胞类型信息
-cell_types <- levels(combined$celltype)
+cell_types <- unique(combined$celltype)
 tmp_length <- length(cell_types)
+
+# cell_type_cols <- scale_color_hue(tmp_length)
 # 使用 RColorBrewer 或 rainbow 生成颜色
+# 使用内置的颜色函数替代 brewer.pal
 if(tmp_length <= 12) {
-  # 使用 Set3 调色板 (最多12种颜色)
-  cell_type_cols <- brewer.pal(max(tmp_length, 3), "Set3")
+  # 使用 rainbow 或其他内置调色板
+  cell_type_cols <- rainbow(max(tmp_length, 3))
+  # 或者使用 gray.colors
+  # cell_type_cols <- gray.colors(max(tmp_length, 3))
 } else {
   # 如果细胞类型超过12个，使用彩虹色
   cell_type_cols <- rainbow(tmp_length)
