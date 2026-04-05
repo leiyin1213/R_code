@@ -206,42 +206,6 @@ load("OS.relabel.Rdata")
 FeaturePlot(combined, features = c("MS4A6A"))
 VlnPlot(combined,features = c("MS4A6A"),pt.size = 0)
 
-
-
-p2 <- DimPlot(
-  combined,
-  reduction = "umap",
- # group.by = "seurat_clusters",
-  pt.size = 0.5
-) +
-  theme_classic() +
-  ggtitle("gingival tissues") +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 16),
-    axis.line = element_line(color = "black"),
-    panel.grid = element_blank(),
-    legend.position = "right"
-  )
-
-p2
-# ===== 8. 左图：MS4A6A表达 =====
-p1 <- FeaturePlot(
-  combined,
-  reduction = "umap",
-  features = c("MS4A6A"),
-  pt.size = 0.5
-) 
-+
-  scale_color_gradient(
-    low = "lightgrey",
-    high = "red"
-  ) +
-  theme_classic() +
-  theme(
-    axis.line = element_line(color = "black"),
-    panel.grid = element_blank()
-  )
-# p1
 # 获取细胞类型信息
 cell_types <- unique(combined$celltype)
 tmp_length <- length(cell_types)
@@ -259,16 +223,57 @@ if(tmp_length <= 12) {
   cell_type_cols <- rainbow(tmp_length)
 }
 
+p2 <- DimPlot(
+  combined,
+  reduction = "umap",
+ # group.by = "seurat_clusters",
+  pt.size = 0.5,
+  cols = cell_type_cols
+) +
+  theme_classic() +
+  ggtitle("gingival tissues") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.line = element_line(color = "black"),
+    panel.grid = element_blank(),
+    legend.position = "right"
+
+  )
+
+p2
+# ===== 8. 左图：MS4A6A表达 =====
+# p1 <- FeaturePlot(
+#   combined,
+#   reduction = "umap",
+#   features = c("MS4A6A"),
+#   pt.size = 0.5
+# ) 
+# +
+#   scale_color_gradient(
+#     low = "lightgrey",
+#     high = "red"
+#   ) +
+#   theme_classic() +
+#   theme(
+#     axis.line = element_line(color = "black"),
+#     panel.grid = element_blank()
+#   )
+# p1
 # 找到特定细胞类型和细胞ID
-epithelial_cells <- WhichCells(combined, idents = "Melanocytes")  # 根据实际的细胞类型ID调整
+#epithelial_cells <- WhichCells(combined, idents = "Melanocytes")  # 根据实际的细胞类型ID调整
+selected_cells  <- c("Melanocytes")
+highlight_cols <- ifelse(cell_types %in% selected_cells, cell_type_cols, "#BEBEBE")
+names(highlight_cols) <- cell_types
 
 # 绘制高亮图
-DimPlot(combined, 
-        cells.highlight = list(Epithelial = epithelial_cells),
-        label = TRUE,
-        reduction = "umap",
-        cols.highlight = "red",  # 高亮颜色
-        cols = cell_type_cols)   # 背景色
+p1<-DimPlot(combined, 
+        #     cells.highlight = list(Epithelial = epithelial_cells),
+        #        label = TRUE,
+              reduction = "umap",
+        #        cols.highlight = "red",  # 高亮颜色
+               cols = highlight_cols
+               pt.size = 0.5
+        )   # 背景色
 # ===== 9. 添加虚线框 + 标注 =====
 # ⚠️ 需要根据你的UMAP实际调整坐标
 p1 <- p1 +
@@ -295,7 +300,7 @@ print(p_final)
 ggsave(
   filename = "Figure_MS4A6A_gingival_umap.png",
   plot = p_final,
-  width = 12,
+  width = 24,
   height = 12,
   dpi = 300
 )
