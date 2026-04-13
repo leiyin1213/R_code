@@ -17,8 +17,8 @@ library(scales)
 # =========================
 # 🔧 1. 设置路径
 # =========================
-setwd("G:/Rcode/code/7-sep_RNA")
-base_dir <- "G:/Rcode/code/7-sep_RNA/GSE164241_RAW"
+setwd("D:/r/R_code/7-sep_RNA")
+base_dir <- "D:/r/R_code/7-sep_RNA/GSE164241_RAW"
 hpca.se <- HumanPrimaryCellAtlasData()
 ref2 <- BlueprintEncodeData()
 # =========================
@@ -153,14 +153,58 @@ markers <- FindAllMarkers(combined,
                           logfc.threshold = 0.25)
 
 head(markers)
-saveRDS(markers, file = "GSE164241_markers.rds")
+write.csv(markers, "data/allmarkers.csv") # 保存结果
 # =========================
 # 💾 保存
 # =========================
-saveRDS(combined, file = "GSE164241_combined.rds")
+saveRDS(combined, file = "GSE164241_combined.rds")zh
 
 markers <- readRDS("GSE164241_markers.rds")
 combined<-readRDS("GSE164241_combined.rds")
+# =========================
+# 💾 手动注释
+# =========================
+#提取每个聚类的Top10高表达Marker
+
+Top10.coarse = markers %>%
+  
+  group_by(cluster) %>%
+  
+  slice_max(n = 10, order_by = avg_log2FC)
+
+write.csv(Top10.coarse, "data/Top10.coarse.csv")
+#手动分配细胞类型
+#此处我参考CellMarker https://bio-bigdata.hrbmu.edu.cn/CellMarker/CellMarker_annotation.jsp
+combined$cell.types = recode(combined$seurat_clusters, 
+                                  
+                                  "0" = "Myeloid cells",
+                                  
+                                  "1" = "Osteoblastic OS cells",
+                                  
+                                  "2" = "NK&T cells",
+                                  
+                                  "3" = "Myeloid cells",
+                                  
+                                  "4" = "Myeloid cells",
+                                  
+                                  "5" = "CAFs",
+                                  
+                                  "6" = "Plasma cells",
+                                  
+                                  "7" = "OCs",
+                                  
+                                  "8" = "Endothelial cells",
+                                  
+                                  "9" = "B cells",
+                                  
+                                  "10" = "Myeloid cells",
+                                  
+                                  "11" = "Plasma cells",
+                                  
+                                  "12" = "Osteoblastic OS cells")
+
+
+
 # =========================
 # 💾 自动注释
 # =========================
@@ -271,7 +315,7 @@ p1<-DimPlot(combined,
         #        label = TRUE,
               reduction = "umap",
         #        cols.highlight = "red",  # 高亮颜色
-               cols = highlight_cols
+               cols = highlight_cols,
                pt.size = 0.5
         )   # 背景色
 # ===== 9. 添加虚线框 + 标注 =====
